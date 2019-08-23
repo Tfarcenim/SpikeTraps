@@ -1,0 +1,8 @@
+{
+	"credit": "Made with Blockbench",
+	"parent": "spiketraps:block/spike_model_4",
+	"textures": {
+		"1": "block/gold_block",
+		"particle": "block/gold_block"
+	}
+}

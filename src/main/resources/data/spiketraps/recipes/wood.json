@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " S ",
+    "SBS"
+  ],
+  "key": {
+    "S": {
+      "item": "minecraft:wooden_sword"
+    },
+    "B": {
+      "tag": "minecraft:logs"
+    }
+  },
+  "result": {
+    "item": "spiketraps:wood_spike",
+    "count": 9
+  }
+}

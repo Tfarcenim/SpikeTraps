@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " S ",
+    "SBS"
+  ],
+  "key": {
+    "S": {
+      "item": "minecraft:diamond_sword"
+    },
+    "B": {
+      "tag": "forge:storage_blocks/diamond"
+    }
+  },
+  "result": {
+    "item": "spiketraps:diamond_spike",
+    "count": 9
+  }
+}

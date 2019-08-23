@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " S ",
+    "SBS"
+  ],
+  "key": {
+    "S": {
+      "item": "minecraft:golden_sword"
+    },
+    "B": {
+      "tag": "forge:storage_blocks/gold"
+    }
+  },
+  "result": {
+    "item": "spiketraps:gold_spike",
+    "count": 9
+  }
+}

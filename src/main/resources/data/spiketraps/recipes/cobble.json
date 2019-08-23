@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " S ",
+    "SBS"
+  ],
+  "key": {
+    "S": {
+      "item": "minecraft:stone_sword"
+    },
+    "B": {
+      "tag": "forge:stone"
+    }
+  },
+  "result": {
+    "item": "spiketraps:cobble_spike",
+    "count": 9
+  }
+}

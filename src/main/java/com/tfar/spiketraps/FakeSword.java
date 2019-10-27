@@ -17,4 +17,9 @@ public class FakeSword extends SwordItem {
     target.attackEntityFrom(DamageSource.causePlayerDamage((PlayerEntity) attacker), getAttackDamage() + EnchantmentHelper.getModifierForCreature(stack, target.getCreatureAttribute()));
     return true;
   }
+
+  @Override
+  public int getMaxDamage(ItemStack stack) {
+    return 0;
+  }
 }

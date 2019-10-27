@@ -22,7 +22,6 @@ import net.minecraft.nbt.ListNBT;
 import net.minecraft.state.DirectionProperty;
 import net.minecraft.state.StateContainer;
 import net.minecraft.state.properties.BlockStateProperties;
-import net.minecraft.tileentity.ShulkerBoxTileEntity;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.*;
 import net.minecraft.util.math.BlockPos;
@@ -52,6 +51,13 @@ public class SpikeBlock extends Block {
     this.damage = damage;
   }
 
+  public static final VoxelShape NORTH_AABB = Block.makeCuboidShape(0, 0, 9, 16, 16, 16);
+  public static final VoxelShape SOUTH_AABB = Block.makeCuboidShape(0, 0, 0, 16, 16, 7);
+  public static final VoxelShape WEST_AABB = Block.makeCuboidShape(9, 0, 0, 16, 16, 16);
+  public static final VoxelShape UP_AABB = Block.makeCuboidShape(0, 0, 0, 16, 7, 16);
+  public static final VoxelShape EAST_AABB = Block.makeCuboidShape(0, 0, 0, 7, 16, 16);
+  public static final VoxelShape DOWN_AABB = Block.makeCuboidShape(0, 9, 0, 16, 16, 16);
+
   public static final DirectionProperty PROPERTY_FACING = BlockStateProperties.FACING;
   private static GameProfile PROFILE = new GameProfile(UUID.fromString("a42ac406-c797-4e0e-b147-f01ac5551be5"), "[SpikeTraps]");
 
@@ -62,26 +68,21 @@ public class SpikeBlock extends Block {
 
   @Override
   public VoxelShape getShape(BlockState state, IBlockReader worldIn, BlockPos pos, ISelectionContext context) {
-    return this.getCollisionShape(state, worldIn, pos, context);
-  }
-
-  @Override
-  public VoxelShape getCollisionShape(BlockState state, IBlockReader worldIn, BlockPos pos, ISelectionContext context) {
     Direction dir = state.get(PROPERTY_FACING);
     switch (dir) {
       case NORTH:
-        return Block.makeCuboidShape(0, 0, 9, 16, 16, 16);
+        return NORTH_AABB;
       case SOUTH:
-        return Block.makeCuboidShape(0, 0, 0, 16, 16, 7);
+        return SOUTH_AABB;
       case WEST:
-        return Block.makeCuboidShape(9, 0, 0, 16, 16, 16);
+        return WEST_AABB;
       case UP:
-        return Block.makeCuboidShape(0, 0, 0, 16, 7, 16);
+        return UP_AABB;
       case EAST:
-        return Block.makeCuboidShape(0, 0, 0, 7, 16, 16);
+        return EAST_AABB;
       case DOWN:
       default:
-        return Block.makeCuboidShape(0, 9, 0, 16, 16, 16);
+        return DOWN_AABB;
     }
   }
 
@@ -122,17 +123,17 @@ public class SpikeBlock extends Block {
   @Override
   public void onEntityCollision(BlockState state, World world, BlockPos pos, Entity entity) {
     if (world.isRemote || !(entity instanceof LivingEntity)) return;
-    if (hasTileEntity()) {
-      FakePlayer fakePlayer = FakePlayerFactory.get((ServerWorld) world, PROFILE);
+    //diamond spike
+    if (hasTileEntity(state)) {
+      FakePlayer fakePlayer = new LessCrashProneFakePlayer(FakePlayerFactory.get((ServerWorld) world, PROFILE));
       SpikeTile tileEntity = (SpikeTile) world.getTileEntity(pos);
-      ItemStack stick = new ItemStack(SpikeTraps.Objects.fake_sword);
       Map<Enchantment, Integer> ench = new HashMap<>();
       ench.put(Enchantments.SHARPNESS, tileEntity.getSharpness());
       ench.put(Enchantments.LOOTING, tileEntity.getLooting());
+      ItemStack stick = new ItemStack(SpikeTraps.Objects.fake_sword);
       EnchantmentHelper.setEnchantments(ench, stick);
       fakePlayer.setHeldItem(Hand.MAIN_HAND, stick);
       fakePlayer.attackTargetEntityWithCurrentItem(entity);
-      fakePlayer.setHeldItem(Hand.MAIN_HAND, ItemStack.EMPTY);
       ((LivingEntity) entity).setRevengeTarget(null);
     } else {
       if (state.getBlock() == SpikeTraps.Objects.gold_spike)
@@ -183,8 +184,6 @@ public class SpikeBlock extends Block {
     TileEntity te = world.getTileEntity(pos);
     if (te instanceof SpikeTile && !world.isRemote && placer != null) {
       ((SpikeTile) te).setEnch(EnchantmentHelper.getMaxEnchantmentLevel(Enchantments.LOOTING, placer), EnchantmentHelper.getMaxEnchantmentLevel(Enchantments.SHARPNESS, placer));
-      // FakePlayer fakePlayer = FakePlayerFactory.get((ServerWorld) world,PROFILE);
-      // for (Slot slot : fakePlayer.inventory.currentItem)
     }
   }
 

@@ -97,11 +97,6 @@ public class SpikeBlock extends Block {
     return state.with(PROPERTY_FACING, rot.rotate(state.get(PROPERTY_FACING)));
   }
 
-  @Override
-  public BlockRenderLayer getRenderLayer() {
-    return BlockRenderLayer.CUTOUT;
-  }
-
   /**
    * Returns the blockstate with the given mirror of the passed blockstate. If inapplicable, returns the passed
    * blockstate.

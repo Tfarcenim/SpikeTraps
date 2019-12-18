@@ -2,6 +2,8 @@ package com.tfar.spiketraps;
 
 import net.minecraft.block.Block;
 import net.minecraft.block.material.Material;
+import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.RenderTypeLookup;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemGroup;
 import net.minecraft.tileentity.TileEntityType;
@@ -9,6 +11,8 @@ import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.event.RegistryEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
+import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.registries.IForgeRegistry;
 import net.minecraftforge.registries.IForgeRegistryEntry;
 import net.minecraftforge.registries.ObjectHolder;
@@ -22,19 +26,27 @@ public class SpikeTraps {
 
   public static final String MODID = "spiketraps";
 
+  public SpikeTraps(){
+    FMLJavaModLoadingContext.get().getModEventBus().addListener(this::client);
+  }
+
+  public void client(FMLClientSetupEvent e){
+    RegistryEvents.MOD_BLOCKS.forEach(block -> RenderTypeLookup.setRenderLayer(block, RenderType.func_228641_d_()));
+  }
+
   // You can use EventBusSubscriber to automatically subscribe events on the contained class (this is subscribing to the MOD
   // Event bus for receiving Registry Events)
   @Mod.EventBusSubscriber(bus=Mod.EventBusSubscriber.Bus.MOD)
   public static class RegistryEvents {
-    private static final Set<Block> MOD_BLOCKS = new HashSet<>();
+    static final Set<Block> MOD_BLOCKS = new HashSet<>();
     @SubscribeEvent
     public static void onBlocksRegistry(final RegistryEvent.Register<Block> event) {
       // register a new block here
-      register(new SpikeBlock(Block.Properties.create(Material.WOOD).hardnessAndResistance(3),4),"wood_spike",event.getRegistry());
-      register(new SpikeBlock(Block.Properties.create(Material.ROCK).hardnessAndResistance(6),5),"cobble_spike",event.getRegistry());
-      register(new SpikeBlock(Block.Properties.create(Material.IRON).hardnessAndResistance(6),6),"iron_spike",event.getRegistry());
-      register(new SpikeBlock(Block.Properties.create(Material.IRON).hardnessAndResistance(6),7),"gold_spike",event.getRegistry());
-      register(new SpikeBlock(Block.Properties.create(Material.ROCK).hardnessAndResistance(6),8),"diamond_spike",event.getRegistry());
+      register(new SpikeBlock(Block.Properties.create(Material.WOOD).hardnessAndResistance(3).func_226896_b_(),4),"wood_spike",event.getRegistry());
+      register(new SpikeBlock(Block.Properties.create(Material.ROCK).hardnessAndResistance(6).func_226896_b_(),5),"cobble_spike",event.getRegistry());
+      register(new SpikeBlock(Block.Properties.create(Material.IRON).hardnessAndResistance(6).func_226896_b_(),6),"iron_spike",event.getRegistry());
+      register(new SpikeBlock(Block.Properties.create(Material.IRON).hardnessAndResistance(6).func_226896_b_(),7),"gold_spike",event.getRegistry());
+      register(new SpikeBlock(Block.Properties.create(Material.ROCK).hardnessAndResistance(6).func_226896_b_(),8),"diamond_spike",event.getRegistry());
     }
 
     @SubscribeEvent

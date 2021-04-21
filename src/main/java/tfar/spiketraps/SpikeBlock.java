@@ -1,4 +1,4 @@
-package com.tfar.spiketraps;
+package tfar.spiketraps;
 
 import com.mojang.authlib.GameProfile;
 import net.minecraft.block.Block;
@@ -10,27 +10,25 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.item.ItemEntity;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.inventory.EquipmentSlotType;
-import net.minecraft.inventory.container.Slot;
+import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.item.BlockItemUseContext;
-import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.nbt.ListNBT;
+import net.minecraft.network.play.server.SEntityVelocityPacket;
+import net.minecraft.particles.ParticleTypes;
 import net.minecraft.state.DirectionProperty;
 import net.minecraft.state.StateContainer;
 import net.minecraft.state.properties.BlockStateProperties;
+import net.minecraft.stats.Stats;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.*;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.shapes.ISelectionContext;
 import net.minecraft.util.math.shapes.VoxelShape;
+import net.minecraft.util.math.vector.Vector3d;
 import net.minecraft.world.IBlockReader;
 import net.minecraft.world.World;
 import net.minecraft.world.server.ServerWorld;
-import net.minecraft.world.storage.loot.LootContext;
 import net.minecraftforge.common.util.FakePlayer;
 import net.minecraftforge.common.util.FakePlayerFactory;
 import net.minecraftforge.event.entity.living.LivingKnockBackEvent;
@@ -39,7 +37,9 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.ObfuscationReflectionHelper;
 
 import javax.annotation.Nullable;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
 public class SpikeBlock extends Block {
 
@@ -59,7 +59,7 @@ public class SpikeBlock extends Block {
   public static final VoxelShape DOWN_AABB = Block.makeCuboidShape(0, 9, 0, 16, 16, 16);
 
   public static final DirectionProperty PROPERTY_FACING = BlockStateProperties.FACING;
-  private static GameProfile PROFILE = new GameProfile(UUID.fromString("a42ac406-c797-4e0e-b147-f01ac5551be5"), "[SpikeTraps]");
+  private static final GameProfile PROFILE = new GameProfile(UUID.fromString("a42ac406-c797-4e0e-b147-f01ac5551be5"), "[SpikeTraps]");
 
   @Override
   public void onEntityWalk(World p_176199_1_, BlockPos p_176199_2_, Entity p_176199_3_) {
@@ -117,24 +117,15 @@ public class SpikeBlock extends Block {
 
   @Override
   public void onEntityCollision(BlockState state, World world, BlockPos pos, Entity entity) {
-    if (world.isRemote || !(entity instanceof LivingEntity)) return;
+    if (world.isRemote || !(entity instanceof LivingEntity) || entity.world.getGameTime() % 10 != 0) return;
     //diamond spike
     if (hasTileEntity(state)) {
-      FakePlayer fakePlayer = new LessCrashProneFakePlayer(FakePlayerFactory.get((ServerWorld) world, PROFILE));
-      SpikeTile tileEntity = (SpikeTile) world.getTileEntity(pos);
-      Map<Enchantment, Integer> ench = new HashMap<>();
-      ench.put(Enchantments.SHARPNESS, tileEntity.getSharpness());
-      ench.put(Enchantments.LOOTING, tileEntity.getLooting());
-      ItemStack stick = new ItemStack(SpikeTraps.Objects.fake_sword);
-      EnchantmentHelper.setEnchantments(ench, stick);
-      fakePlayer.setHeldItem(Hand.MAIN_HAND, stick);
-      fakePlayer.attackTargetEntityWithCurrentItem(entity);
-      ((LivingEntity) entity).setRevengeTarget(null);
+      attack((SpikeTile) world.getTileEntity(pos), (LivingEntity) entity);
     } else {
-      if (state.getBlock() == SpikeTraps.Objects.gold_spike)
+      if (state.getBlock() == SpikeTraps.gold_spike)
         ObfuscationReflectionHelper.setPrivateValue(LivingEntity.class, (LivingEntity) entity, 100, "field_70718_bc");
-      if (state.getBlock() == SpikeTraps.Objects.wood_spike && ((LivingEntity) entity).getHealth() <= 1) return;
-      if (state.getBlock() == SpikeTraps.Objects.wood_spike && ((LivingEntity) entity).getHealth() <= 4) {
+      if (state.getBlock() == SpikeTraps.wood_spike && ((LivingEntity) entity).getHealth() <= 1) return;
+      if (state.getBlock() == SpikeTraps.wood_spike && ((LivingEntity) entity).getHealth() <= 4) {
         entity.attackEntityFrom(DamageSource.CACTUS, ((LivingEntity) entity).getHealth() - 1);
         return;
       }
@@ -142,30 +133,93 @@ public class SpikeBlock extends Block {
     }
   }
 
-  @Override
-  public void onReplaced(BlockState state, World worldIn, BlockPos pos, BlockState newState, boolean isMoving) {
-    TileEntity tileEntity = worldIn.getTileEntity(pos);
-    if (tileEntity instanceof SpikeTile) {
-      SpikeTile spikeTile = (SpikeTile) tileEntity;
-      ItemStack item = new ItemStack(this);
-      if (spikeTile.getLooting() > 0)
-        item.addEnchantment(Enchantments.LOOTING, spikeTile.getLooting());
-      if (spikeTile.getSharpness() > 0)
-      item.addEnchantment(Enchantments.SHARPNESS,spikeTile.getSharpness());
-      ItemEntity entity = new ItemEntity(worldIn, pos.getX() + .5, pos.getY(), pos.getZ() + .5, item);
-      worldIn.addEntity(entity);
-    }
-    super.onReplaced(state, worldIn, pos, newState, isMoving);
-  }
+  /**
+   *
+   * @param tile the player attacking (in this case the spike
+   * @param targetEntity the entity beeing attacked
+   * @see PlayerEntity#attackTargetEntityWithCurrentItem(Entity)
+   */
+  public void attack(SpikeTile tile,LivingEntity targetEntity) {
 
-  @Override
-  public List<ItemStack> getDrops(BlockState state, LootContext.Builder builder) {
-    return state.getBlock() == SpikeTraps.Objects.diamond_spike ? Collections.emptyList() : super.getDrops(state, builder);
+    World world = tile.getWorld();
+
+    Map<Enchantment, Integer> ench = tile.getEnchantments();
+    ItemStack stick = damage == 9 ? new ItemStack(Items.NETHERITE_SWORD) : new ItemStack(Items.DIAMOND_SWORD);
+    EnchantmentHelper.setEnchantments(ench, stick);
+    targetEntity.setRevengeTarget(null);
+
+    FakePlayer fakePlayer = new LessCrashProneFakePlayer(FakePlayerFactory.get((ServerWorld) world, PROFILE));
+    fakePlayer.setHeldItem(Hand.MAIN_HAND, stick);
+
+
+    if (!net.minecraftforge.common.ForgeHooks.onPlayerAttackTarget(fakePlayer, targetEntity)) return;
+    if (targetEntity.canBeAttackedWithItem()) {
+      if (!targetEntity.hitByEntity(fakePlayer)) {
+        float spikeDamage = damage;
+
+        float damageModifier = EnchantmentHelper.getModifierForCreature(fakePlayer.getHeldItemMainhand(), targetEntity.getCreatureAttribute());
+
+        final float attackStrength = 1;
+        damageModifier = damageModifier * attackStrength;
+        fakePlayer.resetCooldown();
+        if (spikeDamage > 0.0F || damageModifier > 0.0F) {
+
+          spikeDamage = spikeDamage + damageModifier;
+
+          boolean caughtFire = false;
+          int fireAspectLevel = EnchantmentHelper.getFireAspectModifier(fakePlayer);
+          float targetEntityHealth = targetEntity.getHealth();
+          if (fireAspectLevel > 0 && !targetEntity.isBurning()) {
+            caughtFire = true;
+            targetEntity.setFire(1);
+          }
+
+          Vector3d motion = targetEntity.getMotion();
+          boolean attackSuccessful = targetEntity.attackEntityFrom(DamageSource.causePlayerDamage(fakePlayer), spikeDamage);
+          if (attackSuccessful) {
+
+            if (targetEntity instanceof ServerPlayerEntity && targetEntity.velocityChanged) {
+              ((ServerPlayerEntity)targetEntity).connection.sendPacket(new SEntityVelocityPacket(targetEntity));
+              targetEntity.velocityChanged = false;
+              targetEntity.setMotion(motion);
+            }
+
+            if (damageModifier > 0.0F) {
+              fakePlayer.onEnchantmentCritical(targetEntity);
+            }
+
+            fakePlayer.setLastAttackedEntity(targetEntity);
+            EnchantmentHelper.applyThornEnchantments(targetEntity, fakePlayer);
+
+            EnchantmentHelper.applyArthropodEnchantments(fakePlayer, targetEntity);
+
+            targetEntity.attackEntityFrom(DamageSource.causePlayerDamage(fakePlayer),spikeDamage);
+
+
+            float damageDealt = targetEntityHealth - targetEntity.getHealth();
+            fakePlayer.addStat(Stats.DAMAGE_DEALT, Math.round(damageDealt * 10.0F));
+            if (fireAspectLevel > 0) {
+              targetEntity.setFire(fireAspectLevel * 4);
+            }
+
+            if (fakePlayer.world instanceof ServerWorld && damageDealt > 2.0F) {
+              int k = (int)(damageDealt * 0.5D);
+              ((ServerWorld)fakePlayer.world).spawnParticle(ParticleTypes.DAMAGE_INDICATOR, targetEntity.getPosX(), targetEntity.getPosYHeight(0.5D), targetEntity.getPosZ(), k, 0.1D, 0.0D, 0.1D, 0.2D);
+            }
+
+          } else {
+            if (caughtFire) {
+              targetEntity.extinguish();
+            }
+          }
+        }
+      }
+    }
   }
 
   @Override
   public boolean hasTileEntity(BlockState state) {
-    return state.getBlock() == SpikeTraps.Objects.diamond_spike;
+    return state.getBlock() == SpikeTraps.diamond_spike || state.getBlock() == SpikeTraps.netherite_spike;
   }
 
   @Nullable
@@ -178,7 +232,7 @@ public class SpikeBlock extends Block {
   public void onBlockPlacedBy(World world, BlockPos pos, BlockState state, @Nullable LivingEntity placer, ItemStack stack) {
     TileEntity te = world.getTileEntity(pos);
     if (te instanceof SpikeTile && !world.isRemote && placer != null) {
-      ((SpikeTile) te).setEnch(EnchantmentHelper.getMaxEnchantmentLevel(Enchantments.LOOTING, placer), EnchantmentHelper.getMaxEnchantmentLevel(Enchantments.SHARPNESS, placer));
+      ((SpikeTile) te).setEnch(EnchantmentHelper.deserializeEnchantments(stack.getEnchantmentTagList()));
     }
   }
 
@@ -186,7 +240,7 @@ public class SpikeBlock extends Block {
   public static class EventHandler {
     @SubscribeEvent
     public static void knockback(LivingKnockBackEvent e) {
-      if (e.getAttacker() instanceof FakePlayer && e.getAttacker().getUniqueID().equals(PROFILE.getId()))
+      if (e.getEntityLiving().getRevengeTarget() instanceof LessCrashProneFakePlayer)
         e.setCanceled(true);
     }
   }

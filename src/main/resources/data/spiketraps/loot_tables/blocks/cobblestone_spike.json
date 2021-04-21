@@ -8,7 +8,7 @@
       "entries": [
         {
           "type": "minecraft:item",
-          "name": "spiketraps:cobble_spike"
+          "name": "spiketraps:cobblestone_spike"
         }
       ],
       "conditions": [
